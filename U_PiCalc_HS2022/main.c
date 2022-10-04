@@ -39,6 +39,7 @@ int main(void)
 	vInitClock();
 	vInitDisplay();
 	
+	
 	xTaskCreate( controllerTask, (const char *) "control_tsk", configMINIMAL_STACK_SIZE+150, NULL, 3, NULL);
 
 	vDisplayClear();
