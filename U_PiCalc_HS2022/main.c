@@ -3,6 +3,8 @@
  *
  * Created: 20.03.2018 18:32:07
  * Author : -
+ * Created: 04.10.2022 21:00:00
+ * Author : Balaram Ramalingam
  */ 
 
 #include <math.h>
@@ -81,4 +83,13 @@ void controllerTask(void* pvParameters) {
 		}
 		vTaskDelay(10/portTICK_RATE_MS);
 	}
+}
+
+void leibniztask (void* pvParameters){
+	float piviertel = 1;
+	unit32_t n = 3;
+	for(;;)
+	
+	piviertel = piviertel - 1/n 
+		
 }
