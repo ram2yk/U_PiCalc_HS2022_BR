@@ -1,8 +1,6 @@
 /*
  * U_PiCalc_HS2022.c
  *
- * Created: 20.03.2018 18:32:07
- * Author : -
  * Created: 04.10.2022 21:00:00
  * Author : Balaram Ramalingam
  */ 
@@ -43,6 +41,7 @@ int main(void)
 	
 	
 	xTaskCreate( controllerTask, (const char *) "control_tsk", configMINIMAL_STACK_SIZE+150, NULL, 3, NULL);
+	xTaskCreate (leibniztask, (const char *) "control_tsk", configMINIMAL_STACK_SIZE+150, NULL, 1, NULL);
 
 	vDisplayClear();
 	vDisplayWriteStringAtPos(0,0,"PI-Calc HS2022");
