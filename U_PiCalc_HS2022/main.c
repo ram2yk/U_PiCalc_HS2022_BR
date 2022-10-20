@@ -77,6 +77,7 @@ void controllerTask(void* pvParameters) {
 		if(getButtonPress(BUTTON4) == LONG_PRESSED) {
 			
 		}
+		vDisplayWriteStringAtPos(3,0,"Str|Stp|Rset|Switch"); //Draw Button Info
 		vTaskDelay(10/portTICK_RATE_MS);
 	}
 }
