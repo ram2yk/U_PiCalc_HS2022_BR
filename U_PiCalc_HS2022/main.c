@@ -32,13 +32,22 @@
 
 
 void controllerTask(void* pvParameters);
+void leibniztask(void* pvParameters);
+
+float piviertel = 1.0;
 
 int main(void)
 {
 	vInitClock();
 	vInitDisplay();
 	
-	xTaskCreate( controllerTask, (const char *) "control_tsk", configMINIMAL_STACK_SIZE+150, NULL, 3, NULL);
+	// Calculation task for PI with leibniz series
+	xTaskCreate( leibniztask, (const char *) "leibniz_task", configMINIMAL_STACK_SIZE+150, NULL, 3, NULL);
+	// Calculation task for PI with another method
+	// xTaskCreate();
+	// Interface Task
+	xTaskCreate( controllerTask, (const char *) "control_task", configMINIMAL_STACK_SIZE+150, NULL, 1, NULL);
+	
 
 	vDisplayClear();
 	vDisplayWriteStringAtPos(0,0,"PI-Calc HS2022");
@@ -53,7 +62,7 @@ void controllerTask(void* pvParameters) {
 		updateButtons();
 		if(getButtonPress(BUTTON1) == SHORT_PRESSED) {
 			char pistring[12];
-			sprintf(&pistring[0], "PI: %.8f", M_PI);
+			sprintf(&pistring[0], "PI: %.8f", piviertel);
 			vDisplayWriteStringAtPos(1,0, "%s", pistring);
 		}
 		if(getButtonPress(BUTTON2) == SHORT_PRESSED) {
@@ -77,7 +86,20 @@ void controllerTask(void* pvParameters) {
 		if(getButtonPress(BUTTON4) == LONG_PRESSED) {
 			
 		}
-		vDisplayWriteStringAtPos(3,0,"Str|Stp|Rset|Switch"); //Draw Button Info
+		vDisplayWriteStringAtPos(3,0,"Str|Stp|Rst|Alg"); //Draw Button Info
 		vTaskDelay(10/portTICK_RATE_MS);
+	}
+}
+
+void leibniztask(void* pvParameters) {
+	
+	uint32_t n = 3;
+	piviertel = 1;
+	// for (;;) {
+	int jj;
+	for (jj = 0; jj < 10; jj++) {
+		piviertel = piviertel - 1.0/n + 1.0/(n+2);
+		n = n + 4;
+		vTaskDelay(1000/portTICK_RATE_MS);
 	}
 }
