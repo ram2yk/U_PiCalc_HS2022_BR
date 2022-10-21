@@ -47,6 +47,9 @@ EventGroupHandle_t egButtonEvents = NULL;
 #define BUTTON4_LONG	0x80
 #define BUTTON_ALL		0xFF
 
+TaskHandle_t xHandleLeibniz = NULL;
+TaskHandle_t xHandleAlgo2 = NULL;
+
 float piviertel = 1.0;
 
 int main(void)
@@ -55,11 +58,15 @@ int main(void)
 	vInitDisplay();
 	
 	// Calculation task for PI with leibniz series
-	xTaskCreate( leibnizTask, (const char *) "leibniz_task", configMINIMAL_STACK_SIZE+150, NULL, 3, NULL);
+	xTaskCreate( leibnizTask, (const char *) "leibniz_task", configMINIMAL_STACK_SIZE+150, NULL, 3, &xHandleLeibniz);
+	vTaskSuspend( xHandleLeibniz );
+	
 	// Calculation task for PI with another method
-	// xTaskCreate();
+	// xTaskCreate(algo2Task, (const char *) "algo2_task", configMINIMAL_STACK_SIZE+150, NULL, 3, &xHandleAlgo2);
+	
 	// Interface Task
 	xTaskCreate( controllerTask, (const char *) "control_task", configMINIMAL_STACK_SIZE+150, NULL, 1, NULL);
+	
 	// Button Task
 	xTaskCreate( buttonTask, (const char*) "button_task", configMINIMAL_STACK_SIZE, NULL, 2, NULL); //Init ButtonTask. Medium Priority. Somehow important to time Button debouncing and timing.
 	
@@ -79,17 +86,14 @@ void controllerTask(void* pvParameters) {
 	}
 	char pistring[12];
 	for(;;) {
-		// updateButtons();
 		if(xEventGroupGetBits(egButtonEvents) & BUTTON1_SHORT) {
-			// char pistring[12];
-			sprintf(&pistring[0], "PI: %.8f", piviertel);
-			vDisplayWriteStringAtPos(1,0, "%s", pistring);
+			vTaskResume( xHandleLeibniz );
 		}
 		if(xEventGroupGetBits(egButtonEvents) & BUTTON2_SHORT) {
-			
+			vTaskSuspend ( xHandleLeibniz );			
 		}
 		if(xEventGroupGetBits(egButtonEvents) & BUTTON3_SHORT) {
-			
+			piviertel = 1;
 		}
 		if(getButtonPress(BUTTON4) == SHORT_PRESSED) {
 			
@@ -107,6 +111,10 @@ void controllerTask(void* pvParameters) {
 			
 		}
 		
+		sprintf(&pistring[0], "PI: %.8f", piviertel);
+		vDisplayWriteStringAtPos(1,0, "%s", pistring);
+		
+		xEventGroupClearBits(egButtonEvents, BUTTON_ALL);
 		vTaskDelay(10/portTICK_RATE_MS);
 	}
 }
@@ -149,11 +157,10 @@ void leibnizTask(void* pvParameters) {
 	
 	uint32_t n = 3;
 	piviertel = 1;
-	// for (;;) {
-	int jj;
-	for (jj = 0; jj < 50; jj++) {
+	for (;;) {
 		piviertel = piviertel - 1.0/n + 1.0/(n+2);
 		n = n + 4;
 		vTaskDelay(1000/portTICK_RATE_MS);
+		
 	}
 }
