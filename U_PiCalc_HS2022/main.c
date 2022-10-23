@@ -33,6 +33,7 @@
 // Function forward declararions
 void controllerTask(void* pvParameters);
 void leibnizTask(void* pvParameters);
+void algo2Task(void* pvParameters);
 void buttonTask(void* pvParameters);
 
 //EventGroup for ButtonEvents.
@@ -47,11 +48,16 @@ EventGroupHandle_t egButtonEvents = NULL;
 #define BUTTON4_LONG	0x80
 #define BUTTON_ALL		0xFF
 
+#define ALGO_LEIBNIZ	"leibniz"
+#define ALGO_2			"algo2"
+
 TaskHandle_t xHandleLeibniz = NULL;
 TaskHandle_t xHandleAlgo2 = NULL;
 
-float piviertel = 1.0;
+float pi = 0.0;
+char algorithm[10] = ALGO_LEIBNIZ;  // Default algorithm: leibniz
 
+ 
 int main(void)
 {
 	vInitClock();
@@ -62,7 +68,8 @@ int main(void)
 	vTaskSuspend( xHandleLeibniz );
 	
 	// Calculation task for PI with another method
-	// xTaskCreate(algo2Task, (const char *) "algo2_task", configMINIMAL_STACK_SIZE+150, NULL, 3, &xHandleAlgo2);
+	xTaskCreate(algo2Task, (const char *) "algo2_task", configMINIMAL_STACK_SIZE+150, NULL, 3, &xHandleAlgo2);
+	vTaskSuspend( xHandleAlgo2 );
 	
 	// Interface Task
 	xTaskCreate( controllerTask, (const char *) "control_task", configMINIMAL_STACK_SIZE+150, NULL, 1, NULL);
@@ -73,30 +80,43 @@ int main(void)
 
 	vDisplayClear();
 	vDisplayWriteStringAtPos(0,0,"PI-Calc HS2022 - Ram"); // Draw title
-	vDisplayWriteStringAtPos(3,0,"Str|Stp|Rst|Alg"); //Draw Button Info
+	vDisplayWriteStringAtPos(3,0,"|Str |Stp |Rst |Alg"); //Draw Button Info
 	
 	vTaskStartScheduler();
 	return 0;
 }
 
 void controllerTask(void* pvParameters) {
-	// initButtons();
 	while(egButtonEvents == NULL) { //Wait for EventGroup to be initialized in other task
 		vTaskDelay(10/portTICK_RATE_MS);
 	}
 	char pistring[12];
 	for(;;) {
 		if(xEventGroupGetBits(egButtonEvents) & BUTTON1_SHORT) {
-			vTaskResume( xHandleLeibniz );
+			if (strcmp(algorithm, ALGO_LEIBNIZ) == 0) {
+				vTaskResume(xHandleLeibniz);
+				vTaskSuspend(xHandleAlgo2);
+			} else if (strcmp(algorithm, ALGO_2) == 0) {
+				vTaskResume( xHandleAlgo2 );
+				vTaskSuspend( xHandleLeibniz );
+			}
+			
 		}
 		if(xEventGroupGetBits(egButtonEvents) & BUTTON2_SHORT) {
-			vTaskSuspend ( xHandleLeibniz );			
+			vTaskSuspend( xHandleLeibniz );
+			vTaskSuspend( xHandleAlgo2 );			
 		}
 		if(xEventGroupGetBits(egButtonEvents) & BUTTON3_SHORT) {
-			piviertel = 1;
+			pi = 0.0;
 		}
-		if(getButtonPress(BUTTON4) == SHORT_PRESSED) {
-			
+		if(xEventGroupGetBits(egButtonEvents) & BUTTON4_SHORT) {
+			if (strcmp(algorithm, ALGO_LEIBNIZ) == 0) {
+				sprintf(&algorithm[0], "%s", ALGO_2);
+				vDisplayWriteStringAtPos(2, 0, "Al:           ");
+			} else if (strcmp(algorithm, ALGO_2) == 0) {
+				sprintf(&algorithm[0], "%s", ALGO_LEIBNIZ);
+				vDisplayWriteStringAtPos(2, 0, "Al:           ");
+			}
 		}
 		if(getButtonPress(BUTTON1) == LONG_PRESSED) {
 			
@@ -111,8 +131,9 @@ void controllerTask(void* pvParameters) {
 			
 		}
 		
-		sprintf(&pistring[0], "PI: %.8f", piviertel);
+		sprintf(&pistring[0], "PI: %.8f", pi);
 		vDisplayWriteStringAtPos(1,0, "%s", pistring);
+		vDisplayWriteStringAtPos(2,0, "Al:%s", algorithm);
 		
 		xEventGroupClearBits(egButtonEvents, BUTTON_ALL);
 		vTaskDelay(10/portTICK_RATE_MS);
@@ -149,14 +170,25 @@ void buttonTask(void *pvParameters) {
 		if(getButtonPress(BUTTON4) == LONG_PRESSED) {
 			xEventGroupSetBits(egButtonEvents, BUTTON4_LONG);
 		}
-		vTaskDelay((1000/BUTTON_UPDATE_FREQUENCY_HZ)/portTICK_RATE_MS);
+		vTaskDelay((500/BUTTON_UPDATE_FREQUENCY_HZ)/portTICK_RATE_MS);
 	}
 }
 
 void leibnizTask(void* pvParameters) {
-	
 	uint32_t n = 3;
-	piviertel = 1;
+	float piviertel = 1;
+	for (;;) {
+		piviertel = piviertel - 1.0/n + 1.0/(n+2);
+		pi = piviertel * 4;
+		n = n + 4;
+		vTaskDelay(1000/portTICK_RATE_MS);
+		
+	}
+}
+
+void algo2Task(void* pvParameters) {
+	uint32_t n = 3;
+	float piviertel = 3;
 	for (;;) {
 		piviertel = piviertel - 1.0/n + 1.0/(n+2);
 		n = n + 4;
