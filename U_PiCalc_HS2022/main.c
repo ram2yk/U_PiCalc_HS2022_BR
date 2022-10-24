@@ -30,11 +30,12 @@
 
 #include "ButtonHandler.h"
 
-// Function forward declararions
+// Function forward declarations
 void controllerTask(void* pvParameters);
 void leibnizTask(void* pvParameters);
-void algo2Task(void* pvParameters);
+void archimedesTask(void* pvParameters);
 void buttonTask(void* pvParameters);
+// void vStopWatchTask(void* pvParameters);
 
 //EventGroup for ButtonEvents.
 EventGroupHandle_t egButtonEvents = NULL;
@@ -49,13 +50,16 @@ EventGroupHandle_t egButtonEvents = NULL;
 #define BUTTON_ALL		0xFF
 
 #define ALGO_LEIBNIZ	"leibniz"
-#define ALGO_2			"algo2"
+#define ALGO_2			"archimedes"
 
 TaskHandle_t xHandleLeibniz = NULL;
-TaskHandle_t xHandleAlgo2 = NULL;
+TaskHandle_t xHandleArchimedes = NULL;
 
 float pi = 0.0;
 char algorithm[10] = ALGO_LEIBNIZ;  // Default algorithm: leibniz
+
+uint8_t milliSeconds = 00;
+bool startTimer = false;
 
  
 int main(void)
@@ -68,8 +72,8 @@ int main(void)
 	vTaskSuspend( xHandleLeibniz );
 	
 	// Calculation task for PI with another method
-	xTaskCreate(algo2Task, (const char *) "algo2_task", configMINIMAL_STACK_SIZE+150, NULL, 3, &xHandleAlgo2);
-	vTaskSuspend( xHandleAlgo2 );
+	xTaskCreate(archimedesTask, (const char *) "archimedes_task", configMINIMAL_STACK_SIZE+150, NULL, 3, &xHandleArchimedes);
+	vTaskSuspend( xHandleArchimedes );
 	
 	// Interface Task
 	xTaskCreate( controllerTask, (const char *) "control_task", configMINIMAL_STACK_SIZE+150, NULL, 1, NULL);
@@ -77,6 +81,8 @@ int main(void)
 	// Button Task
 	xTaskCreate( buttonTask, (const char*) "button_task", configMINIMAL_STACK_SIZE, NULL, 2, NULL); //Init ButtonTask. Medium Priority. Somehow important to time Button debouncing and timing.
 	
+	// Stop watch task
+	// xTaskCreate( vStopWatchTask, (const char *) "stopwatch_task", configMINIMAL_STACK_SIZE, NULL, 3, NULL); //Init StopWatch. Highest Priority to maximize Time accuracy
 
 	vDisplayClear();
 	vDisplayWriteStringAtPos(0,0,"PI-Calc HS2022 - Ram"); // Draw title
@@ -93,18 +99,19 @@ void controllerTask(void* pvParameters) {
 	char pistring[12];
 	for(;;) {
 		if(xEventGroupGetBits(egButtonEvents) & BUTTON1_SHORT) {
+			startTimer = true;
 			if (strcmp(algorithm, ALGO_LEIBNIZ) == 0) {
 				if (xHandleLeibniz != NULL) {
 					vTaskResume(xHandleLeibniz);
 				} else {
 					xTaskCreate( leibnizTask, (const char *) "leibniz_task", configMINIMAL_STACK_SIZE+150, NULL, 3, &xHandleLeibniz);
 				}
-				vTaskSuspend(xHandleAlgo2);
+				vTaskSuspend(xHandleArchimedes);
 			} else if (strcmp(algorithm, ALGO_2) == 0) {
-				if (xHandleAlgo2 != NULL) {
-					vTaskResume( xHandleAlgo2 );
+				if (xHandleArchimedes != NULL) {
+					vTaskResume( xHandleArchimedes );
 				} else {
-					xTaskCreate(algo2Task, (const char *) "algo2_task", configMINIMAL_STACK_SIZE+150, NULL, 3, &xHandleAlgo2);
+					xTaskCreate(archimedesTask, (const char *) "archimedes_task", configMINIMAL_STACK_SIZE+150, NULL, 3, &xHandleArchimedes);
 				}
 				
 				vTaskSuspend( xHandleLeibniz );
@@ -113,7 +120,7 @@ void controllerTask(void* pvParameters) {
 		}
 		if(xEventGroupGetBits(egButtonEvents) & BUTTON2_SHORT) {
 			vTaskSuspend( xHandleLeibniz );
-			vTaskSuspend( xHandleAlgo2 );			
+			vTaskSuspend( xHandleArchimedes );			
 		}
 		if(xEventGroupGetBits(egButtonEvents) & BUTTON3_SHORT) {
 			
@@ -123,8 +130,8 @@ void controllerTask(void* pvParameters) {
 					pi = 0;
 				}
 			} else if (strcmp(algorithm, ALGO_2) == 0) {
-				if (xHandleAlgo2 != NULL) {
-					vTaskDelete( xHandleAlgo2 );
+				if (xHandleArchimedes != NULL) {
+					vTaskDelete( xHandleArchimedes );
 					pi = 0;
 				}
 			}
@@ -133,10 +140,10 @@ void controllerTask(void* pvParameters) {
 			if (strcmp(algorithm, ALGO_LEIBNIZ) == 0) {
 				sprintf(&algorithm[0], "%s", ALGO_2);
 				vDisplayWriteStringAtPos(2, 0, "Al:           ");
-				if (xHandleAlgo2 != NULL) {
-					vTaskResume( xHandleAlgo2 );
+				if (xHandleArchimedes != NULL) {
+					vTaskResume( xHandleArchimedes );
 				} else {
-					xTaskCreate(algo2Task, (const char *) "algo2_task", configMINIMAL_STACK_SIZE+150, NULL, 3, &xHandleAlgo2);
+					xTaskCreate(archimedesTask, (const char *) "archimedes_task", configMINIMAL_STACK_SIZE+150, NULL, 3, &xHandleArchimedes);
 				}
 				
 				vTaskSuspend( xHandleLeibniz );
@@ -148,7 +155,7 @@ void controllerTask(void* pvParameters) {
 				} else {
 					xTaskCreate( leibnizTask, (const char *) "leibniz_task", configMINIMAL_STACK_SIZE+150, NULL, 3, &xHandleLeibniz);
 				}
-				vTaskSuspend(xHandleAlgo2);
+				vTaskSuspend(xHandleArchimedes);
 				
 			}
 		}
@@ -208,7 +215,20 @@ void buttonTask(void *pvParameters) {
 	}
 }
 
+void vStopWatchTask(void *pvParameters) {
+	if (startTimer == true) {
+		for(;;) {
+			milliSeconds++;
+			vTaskDelay(10/portTICK_RATE_MS);
+		}
+	}
+}
+
+
 void leibnizTask(void* pvParameters) {
+	//double integral;
+	//double fractional = modf(pi, &integral);
+	
 	uint32_t n = 3;
 	float piviertel = 1;
 	for (;;) {
@@ -218,9 +238,16 @@ void leibnizTask(void* pvParameters) {
 		vTaskDelay(200/portTICK_RATE_MS);
 		
 	}
+	
+	// int nDigits = floor(log10(abs(fractional))) + 1;
+	
+	//if (nDigits >= 4) {
+		 // // display time
+		 //vDisplayWriteStringAtPos(3,0, "%s", milliSeconds);
+	//}
 }
 
-void algo2Task(void* pvParameters) {
+void archimedesTask(void* pvParameters) {
 	uint32_t n = 3;
 	float pi_local = 3.0;
 	for (;;) {
@@ -228,6 +255,5 @@ void algo2Task(void* pvParameters) {
 		pi = pi_local;
 		n = n + 4;
 		vTaskDelay(200/portTICK_RATE_MS);
-		
 	}
 }
