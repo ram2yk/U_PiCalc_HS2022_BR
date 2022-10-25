@@ -49,8 +49,8 @@ EventGroupHandle_t egButtonEvents = NULL;
 #define BUTTON4_LONG	0x80
 #define BUTTON_ALL		0xFF
 
-#define ALGO_LEIBNIZ			"leibniz"
-#define ALGO_NILAKANTHA			"nilakantha"
+#define ALGO_LEIBNIZ			"lbnz"
+#define ALGO_NILAKANTHA			"nlkn"
 
 float pi_5decimal = 3.14159;
 
@@ -58,7 +58,7 @@ TaskHandle_t xHandleLeibniz = NULL;
 TaskHandle_t xHandleNilakantha = NULL;
 
 float pi = 0.0;
-char algorithm[10] = ALGO_LEIBNIZ;  // Default algorithm: leibniz
+char algorithm[5] = ALGO_LEIBNIZ;  // Default algorithm: leibniz
 
 // Variables to measure the time
 TickType_t xTimeDifference = 0;
@@ -85,10 +85,6 @@ int main(void)
 	// Button Task
 	xTaskCreate( buttonTask, (const char*) "button_task", configMINIMAL_STACK_SIZE, NULL, 3, NULL); //Init ButtonTask. Medium Priority. Somehow important to time Button debouncing and timing.
 
-	vDisplayClear();
-	vDisplayWriteStringAtPos(0,0,"PI-Calc HS2022 - Ram"); // Draw title
-	vDisplayWriteStringAtPos(3,0,"|Str |Stp |Rst |Alg"); //Draw Button Info
-	
 	vTaskStartScheduler();
 	return 0;
 }
@@ -98,6 +94,11 @@ void controllerTask(void* pvParameters) {
 		vTaskDelay(10/portTICK_RATE_MS);
 	}
 	char pistring[12];
+
+	vDisplayClear();
+	vDisplayWriteStringAtPos(0,0,"PI-Calc HS2022 - Ram"); // Draw title
+	vDisplayWriteStringAtPos(3,0,"|Str |Stp |Rst |Alg"); //Draw Button Info
+	
 	for(;;) {
 		if(xEventGroupGetBits(egButtonEvents) & BUTTON1_SHORT) {
 			if (strcmp(algorithm, ALGO_LEIBNIZ) == 0) {
@@ -138,12 +139,12 @@ void controllerTask(void* pvParameters) {
 					pi = 0;
 				}
 			}
-			vDisplayWriteStringAtPos(2,13, "T:     ");
+			vDisplayWriteStringAtPos(2,13, "T:           ");  // Clear 11 chars allocated for time display
 		}
 		if(xEventGroupGetBits(egButtonEvents) & BUTTON4_SHORT) {
 			if (strcmp(algorithm, ALGO_LEIBNIZ) == 0) {
 				sprintf(&algorithm[0], "%s", ALGO_NILAKANTHA);
-				vDisplayWriteStringAtPos(2, 0, "Al:          ");
+				vDisplayWriteStringAtPos(2, 0, "Al:    ");  // Clear 4 chars allocated for algorithm display
 				if (xHandleNilakantha != NULL) {
 					vTaskResume( xHandleNilakantha );
 				} else {
@@ -153,7 +154,7 @@ void controllerTask(void* pvParameters) {
 				vTaskSuspend( xHandleLeibniz );
 			} else if (strcmp(algorithm, ALGO_NILAKANTHA) == 0) {
 				sprintf(&algorithm[0], "%s", ALGO_LEIBNIZ);
-				vDisplayWriteStringAtPos(2, 0, "Al:            ");
+				vDisplayWriteStringAtPos(2, 0, "Al:    ");  // Clear 4 chars allocated for algorithm display
 				if (xHandleLeibniz != NULL) {
 					vTaskResume(xHandleLeibniz);
 				} else {
@@ -186,7 +187,7 @@ void controllerTask(void* pvParameters) {
 		} else if (strcmp(algorithm, ALGO_NILAKANTHA) == 0) {
 			xTimeDifference = xTimeDifferenceNilakantha;
 		}
-		vDisplayWriteStringAtPos(2,13, "T:%d", xTimeDifference);
+		vDisplayWriteStringAtPos(2,8, "T:%d", xTimeDifference);
 		
 		xEventGroupClearBits(egButtonEvents, BUTTON_ALL);
 		vTaskDelay(500/portTICK_RATE_MS);
