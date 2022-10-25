@@ -93,7 +93,8 @@ void controllerTask(void* pvParameters) {
 	while(egButtonEvents == NULL) { //Wait for EventGroup to be initialized in other task
 		vTaskDelay(10/portTICK_RATE_MS);
 	}
-	char pistring[12];
+	char piString[12];
+	char timeString[11];
 
 	vDisplayClear();
 	vDisplayWriteStringAtPos(0,0,"PI-Calc HS2022 - Ram"); // Draw title
@@ -177,8 +178,8 @@ void controllerTask(void* pvParameters) {
 			
 		}
 		
-		sprintf(&pistring[0], "PI: %.8f", pi);
-		vDisplayWriteStringAtPos(1,0, "%s", pistring);
+		sprintf(&piString[0], "PI: %.12f", pi);
+		vDisplayWriteStringAtPos(1,0, "%s", piString);
 		vDisplayWriteStringAtPos(2,0, "Al:%s", algorithm);
 
 
@@ -188,9 +189,8 @@ void controllerTask(void* pvParameters) {
 			xTimeDifference = xTimeDifferenceNilakantha;
 		}
 		// Write time difference to display
-		if (xTimeDifference != 0) {
-			vDisplayWriteStringAtPos(2,13, "T:%dms", xTimeDifference);
-		}
+		sprintf(&timeString[0], "T: %lu", xTimeDifference);
+		vDisplayWriteStringAtPos(2,8, "%s", timeString);
 		
 		xEventGroupClearBits(egButtonEvents, BUTTON_ALL);
 		vTaskDelay(500/portTICK_RATE_MS);
