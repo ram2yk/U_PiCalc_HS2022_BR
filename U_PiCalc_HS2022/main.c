@@ -178,7 +178,7 @@ void controllerTask(void* pvParameters) {
 			
 		}
 		
-		sprintf(&piString[0], "PI: %.12f", pi);
+		sprintf(&piString[0], "PI: %.8f", pi);
 		vDisplayWriteStringAtPos(1,0, "%s", piString);
 		vDisplayWriteStringAtPos(2,0, "Al:%s", algorithm);
 
@@ -190,7 +190,7 @@ void controllerTask(void* pvParameters) {
 		}
 		// Write time difference to display
 		sprintf(&timeString[0], "T: %lu", xTimeDifference);
-		vDisplayWriteStringAtPos(2,8, "%s", timeString);
+		vDisplayWriteStringAtPos(2,8, "%sms", timeString);
 		
 		xEventGroupClearBits(egButtonEvents, BUTTON_ALL);
 		vTaskDelay(500/portTICK_RATE_MS);
