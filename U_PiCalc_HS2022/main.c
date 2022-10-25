@@ -8,7 +8,7 @@
 #include <math.h>	
 #include <stdio.h>
 #include <string.h>
-#include <inttypes.h>
+// #include <inttypes.h>
 #include "avr_compiler.h"
 #include "pmic_driver.h"
 #include "TC_driver.h"
@@ -187,7 +187,10 @@ void controllerTask(void* pvParameters) {
 		} else if (strcmp(algorithm, ALGO_NILAKANTHA) == 0) {
 			xTimeDifference = xTimeDifferenceNilakantha;
 		}
-		vDisplayWriteStringAtPos(2,8, "T:%d", xTimeDifference);
+		// Write time difference to display
+		if (xTimeDifference != 0) {
+			vDisplayWriteStringAtPos(2,13, "T:%dms", xTimeDifference);
+		}
 		
 		xEventGroupClearBits(egButtonEvents, BUTTON_ALL);
 		vTaskDelay(500/portTICK_RATE_MS);
@@ -233,9 +236,10 @@ void leibnizTask(void* pvParameters) {
 
 	TickType_t xStartTimeLeibniz, xStopTimeLeibniz;
 	
+	xTimeDifferenceLeibniz = 0;
 	xStartTimeLeibniz = xTaskGetTickCount();
 	uint32_t n = 3;
-	float piviertel = 1;
+	float piviertel = 1.0;
 	for (;;) {
 		piviertel = piviertel - 1.0/n + 1.0/(n+2);
 		pi = piviertel * 4;
@@ -244,8 +248,8 @@ void leibnizTask(void* pvParameters) {
 		if ((floorf(pi * 100000) / 100000) != 3.14159f) {
 			xTimeDifferenceLeibniz = xStopTimeLeibniz - xStartTimeLeibniz;
 		}
+
 		vTaskDelay(200/portTICK_RATE_MS);
-		
 	}
 	
 
@@ -255,6 +259,7 @@ void nilakanthaTask(void* pvParameters) {
 
 	TickType_t xStartTimeNilakantha, xStopTimeNilakantha;
 
+	xTimeDifferenceNilakantha = 0;
 	xStartTimeNilakantha = xTaskGetTickCount();
 	uint32_t n = 3;
 	float pi_local = 3.0;
