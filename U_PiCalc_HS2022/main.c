@@ -251,7 +251,7 @@ void nilakanthaTask(void* pvParameters) {
 	uint32_t n = 3;
 	float pi_local = 3.0;
 	for (;;) {
-		pi_local = pi_local + 4.0/(pow(n,3) - n) + 4.0/(pow(n+2,3) - (n+2));
+		pi_local = pi_local + 4.0/(pow(n,3) - n) - 4.0/(pow(n+2,3) - (n+2));
 		pi = pi_local;
 		n = n + 4;
 		vTaskDelay(200/portTICK_RATE_MS);
