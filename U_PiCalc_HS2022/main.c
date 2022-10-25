@@ -189,7 +189,7 @@ void controllerTask(void* pvParameters) {
 			xTimeDifference = xTimeDifferenceNilakantha;
 		}
 		// Write time difference to display
-		sprintf(&timeString[0], "T: %lu", xTimeDifference);
+		sprintf(&timeString[0], "T:%lu", xTimeDifference);
 		vDisplayWriteStringAtPos(2,8, "%sms", timeString);
 		
 		xEventGroupClearBits(egButtonEvents, BUTTON_ALL);
@@ -249,7 +249,7 @@ void leibnizTask(void* pvParameters) {
 			xTimeDifferenceLeibniz = xStopTimeLeibniz - xStartTimeLeibniz;
 		}
 
-		vTaskDelay(200/portTICK_RATE_MS);
+		vTaskDelay(10/portTICK_RATE_MS);
 	}
 	
 
@@ -272,6 +272,6 @@ void nilakanthaTask(void* pvParameters) {
 			xTimeDifferenceNilakantha = xStopTimeNilakantha - xStartTimeNilakantha;
 		}
 
-		vTaskDelay(200/portTICK_RATE_MS);
+		vTaskDelay(10/portTICK_RATE_MS);
 	}
 }
