@@ -8,6 +8,7 @@
 #include <math.h>	
 #include <stdio.h>
 #include <string.h>
+// #include <inttypes.h>
 #include "avr_compiler.h"
 #include "pmic_driver.h"
 #include "TC_driver.h"
@@ -35,7 +36,6 @@ void controllerTask(void* pvParameters);
 void leibnizTask(void* pvParameters);
 void nilakanthaTask(void* pvParameters);
 void buttonTask(void* pvParameters);
-// void StopWatchTask(void* pvParameters);
 
 //EventGroup for ButtonEvents.
 EventGroupHandle_t egButtonEvents = NULL;
@@ -49,17 +49,21 @@ EventGroupHandle_t egButtonEvents = NULL;
 #define BUTTON4_LONG	0x80
 #define BUTTON_ALL		0xFF
 
-#define ALGO_LEIBNIZ			"leibniz"
-#define ALGO_NILAKANTHA			"nilakantha"
+#define ALGO_LEIBNIZ			"lbnz"
+#define ALGO_NILAKANTHA			"nlkn"
+
+float pi_5decimal = 3.14159;
 
 TaskHandle_t xHandleLeibniz = NULL;
 TaskHandle_t xHandleNilakantha = NULL;
 
 float pi = 0.0;
-char algorithm[10] = ALGO_LEIBNIZ;  // Default algorithm: leibniz
+char algorithm[5] = ALGO_LEIBNIZ;  // Default algorithm: leibniz
 
-uint8_t milliSeconds = 00;
-bool startTimer = false;
+// Variables to measure the time
+TickType_t xTimeDifference = 0;
+TickType_t xTimeDifferenceLeibniz = 0;
+TickType_t xTimeDifferenceNilakantha = 0;
 
  
 int main(void)
@@ -80,14 +84,7 @@ int main(void)
 	
 	// Button Task
 	xTaskCreate( buttonTask, (const char*) "button_task", configMINIMAL_STACK_SIZE, NULL, 3, NULL); //Init ButtonTask. Medium Priority. Somehow important to time Button debouncing and timing.
-	
-	// Stop watch task
-	// xTaskCreate( StopWatchTask, (const char *) "stopwatch_task", configMINIMAL_STACK_SIZE, NULL, 2, NULL); //Init StopWatch. Highest Priority to maximize Time accuracy
 
-	vDisplayClear();
-	vDisplayWriteStringAtPos(0,0,"PI-Calc HS2022 - Ram"); // Draw title
-	vDisplayWriteStringAtPos(3,0,"|Str |Stp |Rst |Alg"); //Draw Button Info
-	
 	vTaskStartScheduler();
 	return 0;
 }
@@ -96,10 +93,15 @@ void controllerTask(void* pvParameters) {
 	while(egButtonEvents == NULL) { //Wait for EventGroup to be initialized in other task
 		vTaskDelay(10/portTICK_RATE_MS);
 	}
-	char pistring[12];
+	char piString[12];
+	char timeString[11];
+
+	vDisplayClear();
+	vDisplayWriteStringAtPos(0,0,"PI-Calc HS2022 - Ram"); // Draw title
+	vDisplayWriteStringAtPos(3,0,"|Str |Stp |Rst |Alg"); //Draw Button Info
+	
 	for(;;) {
 		if(xEventGroupGetBits(egButtonEvents) & BUTTON1_SHORT) {
-			startTimer = true;
 			if (strcmp(algorithm, ALGO_LEIBNIZ) == 0) {
 				if (xHandleLeibniz != NULL) {
 					vTaskResume(xHandleLeibniz);
@@ -127,19 +129,23 @@ void controllerTask(void* pvParameters) {
 			if (strcmp(algorithm, ALGO_LEIBNIZ) == 0) {
 				if (xHandleLeibniz != NULL) {
 					vTaskDelete(xHandleLeibniz);
+					xTimeDifferenceLeibniz = 0;
 					pi = 0;
+					
 				}
 			} else if (strcmp(algorithm, ALGO_NILAKANTHA) == 0) {
 				if (xHandleNilakantha != NULL) {
 					vTaskDelete( xHandleNilakantha );
+					xTimeDifferenceNilakantha = 0;
 					pi = 0;
 				}
 			}
+			vDisplayWriteStringAtPos(2,13, "T:           ");  // Clear 11 chars allocated for time display
 		}
 		if(xEventGroupGetBits(egButtonEvents) & BUTTON4_SHORT) {
 			if (strcmp(algorithm, ALGO_LEIBNIZ) == 0) {
 				sprintf(&algorithm[0], "%s", ALGO_NILAKANTHA);
-				vDisplayWriteStringAtPos(2, 0, "Al:           ");
+				vDisplayWriteStringAtPos(2, 0, "Al:    ");  // Clear 4 chars allocated for algorithm display
 				if (xHandleNilakantha != NULL) {
 					vTaskResume( xHandleNilakantha );
 				} else {
@@ -149,7 +155,7 @@ void controllerTask(void* pvParameters) {
 				vTaskSuspend( xHandleLeibniz );
 			} else if (strcmp(algorithm, ALGO_NILAKANTHA) == 0) {
 				sprintf(&algorithm[0], "%s", ALGO_LEIBNIZ);
-				vDisplayWriteStringAtPos(2, 0, "Al:           ");
+				vDisplayWriteStringAtPos(2, 0, "Al:    ");  // Clear 4 chars allocated for algorithm display
 				if (xHandleLeibniz != NULL) {
 					vTaskResume(xHandleLeibniz);
 				} else {
@@ -172,9 +178,19 @@ void controllerTask(void* pvParameters) {
 			
 		}
 		
-		sprintf(&pistring[0], "PI: %.8f", pi);
-		vDisplayWriteStringAtPos(1,0, "%s", pistring);
+		sprintf(&piString[0], "PI: %.8f", pi);
+		vDisplayWriteStringAtPos(1,0, "%s", piString);
 		vDisplayWriteStringAtPos(2,0, "Al:%s", algorithm);
+
+
+		if (strcmp(algorithm, ALGO_LEIBNIZ) == 0) {
+			xTimeDifference = xTimeDifferenceLeibniz;
+		} else if (strcmp(algorithm, ALGO_NILAKANTHA) == 0) {
+			xTimeDifference = xTimeDifferenceNilakantha;
+		}
+		// Write time difference to display
+		sprintf(&timeString[0], "T:%lu", xTimeDifference);
+		vDisplayWriteStringAtPos(2,8, "%sms", timeString);
 		
 		xEventGroupClearBits(egButtonEvents, BUTTON_ALL);
 		vTaskDelay(500/portTICK_RATE_MS);
@@ -215,45 +231,47 @@ void buttonTask(void *pvParameters) {
 	}
 }
 
-void StopWatchTask(void *pvParameters) {
-	if (startTimer == true) {
-		for(;;) {
-			milliSeconds++;
-			vTaskDelay(10/portTICK_RATE_MS);
-		}
-	}
-}
-
 
 void leibnizTask(void* pvParameters) {
-	//double integral;
-	//double fractional = modf(pi, &integral);
+
+	TickType_t xStartTimeLeibniz, xStopTimeLeibniz;
 	
+	xTimeDifferenceLeibniz = 0;
+	xStartTimeLeibniz = xTaskGetTickCount();
 	uint32_t n = 3;
-	float piviertel = 1;
+	float piviertel = 1.0;
 	for (;;) {
 		piviertel = piviertel - 1.0/n + 1.0/(n+2);
 		pi = piviertel * 4;
 		n = n + 4;
-		vTaskDelay(200/portTICK_RATE_MS);
-		
+		xStopTimeLeibniz = xTaskGetTickCount();
+		if ((floorf(pi * 100000) / 100000) != 3.14159f) {
+			xTimeDifferenceLeibniz = xStopTimeLeibniz - xStartTimeLeibniz;
+		}
+
+		vTaskDelay(10/portTICK_RATE_MS);
 	}
 	
-	// int nDigits = floor(log10(abs(fractional))) + 1;
-	
-	//if (nDigits >= 4) {
-		 // // display time
-		 //vDisplayWriteStringAtPos(3,0, "%s", milliSeconds);
-	//}
+
 }
 
 void nilakanthaTask(void* pvParameters) {
+
+	TickType_t xStartTimeNilakantha, xStopTimeNilakantha;
+
+	xTimeDifferenceNilakantha = 0;
+	xStartTimeNilakantha = xTaskGetTickCount();
 	uint32_t n = 3;
 	float pi_local = 3.0;
 	for (;;) {
 		pi_local = pi_local + 4.0/(pow(n,3) - n) - 4.0/(pow(n+2,3) - (n+2));
 		pi = pi_local;
 		n = n + 4;
-		vTaskDelay(200/portTICK_RATE_MS);
+		xStopTimeNilakantha = xTaskGetTickCount();
+		if ((floorf(pi *100000) / 100000) != 3.14159f) {
+			xTimeDifferenceNilakantha = xStopTimeNilakantha - xStartTimeNilakantha;
+		}
+
+		vTaskDelay(10/portTICK_RATE_MS);
 	}
 }
