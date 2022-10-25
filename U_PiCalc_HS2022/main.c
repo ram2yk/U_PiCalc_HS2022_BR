@@ -61,6 +61,11 @@ char algorithm[10] = ALGO_LEIBNIZ;  // Default algorithm: leibniz
 uint8_t milliSeconds = 00;
 bool startTimer = false;
 
+// Variables to measure the time
+TickType_t xTimeDifference;
+TickType_t xTimeDifferenceLeibniz;
+TickType_t xTimeDifferenceNilakantha;
+
  
 int main(void)
 {
@@ -139,7 +144,7 @@ void controllerTask(void* pvParameters) {
 		if(xEventGroupGetBits(egButtonEvents) & BUTTON4_SHORT) {
 			if (strcmp(algorithm, ALGO_LEIBNIZ) == 0) {
 				sprintf(&algorithm[0], "%s", ALGO_NILAKANTHA);
-				vDisplayWriteStringAtPos(2, 0, "Al:           ");
+				vDisplayWriteStringAtPos(2, 0, "Al:          ");
 				if (xHandleNilakantha != NULL) {
 					vTaskResume( xHandleNilakantha );
 				} else {
@@ -149,7 +154,7 @@ void controllerTask(void* pvParameters) {
 				vTaskSuspend( xHandleLeibniz );
 			} else if (strcmp(algorithm, ALGO_NILAKANTHA) == 0) {
 				sprintf(&algorithm[0], "%s", ALGO_LEIBNIZ);
-				vDisplayWriteStringAtPos(2, 0, "Al:           ");
+				vDisplayWriteStringAtPos(2, 0, "Al:            ");
 				if (xHandleLeibniz != NULL) {
 					vTaskResume(xHandleLeibniz);
 				} else {
@@ -175,6 +180,14 @@ void controllerTask(void* pvParameters) {
 		sprintf(&pistring[0], "PI: %.8f", pi);
 		vDisplayWriteStringAtPos(1,0, "%s", pistring);
 		vDisplayWriteStringAtPos(2,0, "Al:%s", algorithm);
+
+
+		if (strcmp(algorithm, ALGO_LEIBNIZ) == 0) {
+			xTimeDifference = xTimeDifferenceLeibniz;
+		} else if (strcmp(algorithm, ALGO_NILAKANTHA) == 0) {
+			xTimeDifference = xTimeDifferenceNilakantha;
+		}
+		vDisplayWriteStringAtPos(2,13, "T:%lu", xTimeDifference);
 		
 		xEventGroupClearBits(egButtonEvents, BUTTON_ALL);
 		vTaskDelay(500/portTICK_RATE_MS);
@@ -228,13 +241,18 @@ void StopWatchTask(void *pvParameters) {
 void leibnizTask(void* pvParameters) {
 	//double integral;
 	//double fractional = modf(pi, &integral);
+
+	TickType_t xStartTimeLeibniz, xStopTimeLeibniz;
 	
+	xStartTimeLeibniz = xTaskGetTickCount();
 	uint32_t n = 3;
 	float piviertel = 1;
 	for (;;) {
 		piviertel = piviertel - 1.0/n + 1.0/(n+2);
 		pi = piviertel * 4;
 		n = n + 4;
+		xStopTimeLeibniz = xTaskGetTickCount();
+		xTimeDifferenceLeibniz = xStopTimeLeibniz - xStartTimeLeibniz;
 		vTaskDelay(200/portTICK_RATE_MS);
 		
 	}
@@ -248,12 +266,18 @@ void leibnizTask(void* pvParameters) {
 }
 
 void nilakanthaTask(void* pvParameters) {
+
+	TickType_t xStartTimeNilakantha, xStopTimeNilakantha;
+
+	xStartTimeNilakantha = xTaskGetTickCount();
 	uint32_t n = 3;
 	float pi_local = 3.0;
 	for (;;) {
 		pi_local = pi_local + 4.0/(pow(n,3) - n) - 4.0/(pow(n+2,3) - (n+2));
 		pi = pi_local;
 		n = n + 4;
+		xStopTimeNilakantha = xTaskGetTickCount();
+		xTimeDifferenceNilakantha = xStopTimeNilakantha - xStartTimeNilakantha;
 		vTaskDelay(200/portTICK_RATE_MS);
 	}
 }
